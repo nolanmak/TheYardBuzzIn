@@ -1,0 +1,16 @@
+{
+  "name": "theyardbuzzin",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "keywords": [],
+  "description": "",
+  "dependencies": {
+    "puppeteer": "^24.4.0",
+    "puppeteer-core": "^24.4.0"
+  }
+}
