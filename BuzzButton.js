@@ -145,6 +145,25 @@ async function pressButtons(page) {
           // This is the exact button structure from the user's input
           const buttonSelector = 'button.MuiButtonBase-root.MuiIconButton-root.MuiIconButton-sizeLarge[data-test-id="unlock-button"]';
           const buttons = document.querySelectorAll(buttonSelector);
+          let clickedAny = false;
+          
+          // Function to click buttons simultaneously
+          const clickButtons = (buttonArray) => {
+            if (buttonArray.length > 0) {
+              // Click buttons simultaneously
+              if (buttonArray[0]) {
+                console.log('Clicking first button');
+                buttonArray[0].click();
+                clickedAny = true;
+              }
+              if (buttonArray[1]) {
+                console.log('Clicking second button');
+                buttonArray[1].click();
+                clickedAny = true;
+              }
+            }
+            return clickedAny;
+          };
           
           if (buttons.length === 0) {
             // Try a more general selector
@@ -154,46 +173,30 @@ async function pressButtons(page) {
             });
             
             if (lockButtons.length > 0) {
-              // Click the first two buttons
-              if (lockButtons[0]) {
-                console.log('Clicking first lock button');
-                lockButtons[0].click();
-              }
-              if (lockButtons[1]) {
-                console.log('Clicking second lock button');
-                lockButtons[1].click();
-              }
-              return true;
+              console.log(`Found ${lockButtons.length} lock buttons`);
+              clickButtons(lockButtons);
             }
             
             // Try even more general approach - any button that might be related to locks
-            const possibleLockButtons = Array.from(allButtons).filter(btn => {
-              const buttonText = btn.textContent || '';
-              return buttonText.toLowerCase().includes('unlock') || 
-                     buttonText.toLowerCase().includes('lock') || 
-                     buttonText.toLowerCase().includes('door');
-            });
-            
-            if (possibleLockButtons.length > 0) {
-              console.log('Found possible lock-related buttons by text');
-              if (possibleLockButtons[0]) possibleLockButtons[0].click();
-              if (possibleLockButtons[1]) possibleLockButtons[1].click();
-              return true;
+            if (!clickedAny) {
+              const possibleLockButtons = Array.from(allButtons).filter(btn => {
+                const buttonText = btn.textContent || '';
+                return buttonText.toLowerCase().includes('unlock') || 
+                       buttonText.toLowerCase().includes('lock') || 
+                       buttonText.toLowerCase().includes('door');
+              });
+              
+              if (possibleLockButtons.length > 0) {
+                console.log(`Found ${possibleLockButtons.length} possible lock-related buttons by text`);
+                clickButtons(possibleLockButtons);
+              }
             }
           } else {
-            // Click the first two buttons
-            if (buttons[0]) {
-              console.log('Clicking first button with exact selector');
-              buttons[0].click();
-            }
-            if (buttons[1]) {
-              console.log('Clicking second button with exact selector');
-              buttons[1].click();
-            }
-            return true;
+            console.log(`Found ${buttons.length} buttons with exact selector`);
+            clickButtons(buttons);
           }
           
-          return false;
+          return clickedAny;
         });
         
         if (lastAttempt) {
@@ -214,59 +217,67 @@ async function pressButtons(page) {
       return true;
     }
   } else {
-    // We found buttons using the selector, now click the first two buttons 5 times each with a delay
-    console.log('Clicking the first two unlock buttons 5 times each with a 3-second delay');
+    // We found buttons using the selector, now click both buttons simultaneously 5 times with a delay
+    console.log('Clicking both unlock buttons simultaneously 5 times with a 3-second delay');
     
-    // Click the first button 5 times
-    if (unlockButtons.length >= 1) {
-      console.log('Clicking the first unlock button 5 times...');
-      for (let i = 0; i < 5; i++) {
-        console.log(`Click ${i+1} on first button`);
-        try {
-          // Re-query the DOM for the button each time to avoid detached node errors
-          const freshButtons = await page.$$('button[data-test-id="unlock-button"]');
-          if (freshButtons.length > 0) {
-            await freshButtons[0].click();
-          } else {
-            // Try alternative selector if the original selector doesn't find buttons
-            const altButtons = await page.$$('button:has(img[alt="LockIcon"])');
-            if (altButtons.length > 0) {
-              await altButtons[0].click();
-            } else {
-              console.log(`No buttons found for click ${i+1}`);
-            }
-          }
-        } catch (e) {
-          console.error('Error clicking first button:', e);
+    // Click both buttons 5 times simultaneously
+    for (let i = 0; i < 5; i++) {
+      console.log(`Click attempt ${i+1} on both buttons simultaneously`);
+      
+      try {
+        // Re-query the DOM for buttons each time to avoid detached node errors
+        const freshButtons = await page.$$('button[data-test-id="unlock-button"]');
+        const altButtons = await page.$$('button:has(img[alt="LockIcon"])');
+        
+        // Create an array to hold our click promises
+        const clickPromises = [];
+        
+        // Try to click the first button
+        if (freshButtons.length > 0) {
+          console.log('Clicking first button with primary selector');
+          clickPromises.push(freshButtons[0].click().catch(e => console.error('Error clicking first button with primary selector:', e)));
+        } else if (altButtons.length > 0) {
+          console.log('Clicking first button with alternative selector');
+          clickPromises.push(altButtons[0].click().catch(e => console.error('Error clicking first button with alternative selector:', e)));
+        } else {
+          console.log(`No first button found for click ${i+1}`);
         }
-        await new Promise(resolve => setTimeout(resolve, 3000)); // 3-second delay between clicks
-      }
-    }
-    
-    // Click the second button 5 times
-    if (unlockButtons.length >= 2) {
-      console.log('Clicking the second unlock button 5 times...');
-      for (let i = 0; i < 5; i++) {
-        console.log(`Click ${i+1} on second button`);
-        try {
-          // Re-query the DOM for the button each time to avoid detached node errors
-          const freshButtons = await page.$$('button[data-test-id="unlock-button"]');
-          if (freshButtons.length > 1) {
-            await freshButtons[1].click();
-          } else {
-            // Try alternative selector if the original selector doesn't find buttons
-            const altButtons = await page.$$('button:has(img[alt="LockIcon"])');
-            if (altButtons.length > 1) {
-              await altButtons[1].click();
-            } else {
-              console.log(`No second button found for click ${i+1}`);
-            }
-          }
-        } catch (e) {
-          console.error('Error clicking second button:', e);
+        
+        // Try to click the second button
+        if (freshButtons.length > 1) {
+          console.log('Clicking second button with primary selector');
+          clickPromises.push(freshButtons[1].click().catch(e => console.error('Error clicking second button with primary selector:', e)));
+        } else if (altButtons.length > 1) {
+          console.log('Clicking second button with alternative selector');
+          clickPromises.push(altButtons[1].click().catch(e => console.error('Error clicking second button with alternative selector:', e)));
+        } else {
+          console.log(`No second button found for click ${i+1}`);
         }
-        await new Promise(resolve => setTimeout(resolve, 3000)); // 3-second delay between clicks
+        
+        // Execute all clicks simultaneously
+        if (clickPromises.length > 0) {
+          await Promise.all(clickPromises);
+          console.log(`Successfully clicked ${clickPromises.length} button(s) simultaneously`);
+        } else {
+          // If no buttons were found with standard selectors, try page.evaluate as a fallback
+          console.log('No buttons found with standard selectors, trying page.evaluate');
+          await page.evaluate(() => {
+            const allButtons = document.querySelectorAll('button');
+            const lockButtons = Array.from(allButtons).filter(btn => {
+              return btn.innerHTML.includes('LockIcon');
+            });
+            
+            // Click buttons simultaneously
+            if (lockButtons[0]) lockButtons[0].click();
+            if (lockButtons[1]) lockButtons[1].click();
+          });
+        }
+      } catch (e) {
+        console.error('Error during simultaneous button clicks:', e);
       }
+      
+      // Wait between click attempts
+      await new Promise(resolve => setTimeout(resolve, 3000)); // 3-second delay between clicks
     }
     
     return true;
