@@ -2,6 +2,8 @@ const puppeteer = require('puppeteer-core');
 const { exec } = require('child_process');
 const util = require('util');
 const execPromise = util.promisify(exec);
+const { startBot } = require('./DiscordBot');
+require('dotenv').config();
 
 async function unlockDoor() {
   console.log('Starting the door unlock process...');
@@ -138,5 +140,9 @@ async function unlockDoor() {
   }
 }
 
-// Run the function
+// Run the functions
 unlockDoor();
+
+// Start the Discord bot with the token from .env
+console.log('Starting Discord bot...');
+startBot(process.env.DISCORD_BOT_TOKEN);
