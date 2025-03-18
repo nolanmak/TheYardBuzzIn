@@ -204,7 +204,6 @@ function startDiscordChannelListener(token) {
     
     try {
       // Respond to the message
-      await message.reply('Unlocking the door for you! Please wait...');
       
       // Call the unlockDoor function and wait for it to complete
       console.log('Triggering door unlock...');
