@@ -288,7 +288,7 @@ async function pressButtons(page) {
 
 /**
  * Checks if the door was successfully unlocked
- * @param {Page} page - Puppeteer Page object
+ * @param {Page} page - Puppeteer Page objectd
  * @returns {Promise<boolean>} - Whether the door was successfully unlocked
  */
 async function checkUnlockSuccess(page) {
