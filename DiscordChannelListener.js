@@ -204,25 +204,40 @@ function startDiscordChannelListener(token) {
     
     try {
       // Respond to the message
-      await message.reply('Unlocking the door for you!');
+      await message.reply('Unlocking the door for you! Please wait...');
       
-      // Call the unlockDoor function
+      // Call the unlockDoor function and wait for it to complete
       console.log('Triggering door unlock...');
       try {
-        unlockDoor();
+        // Use await to ensure we wait for the door unlock process to complete
+        await new Promise((resolve, reject) => {
+          try {
+            // Call unlockDoor and set a timeout to ensure we don't wait forever
+            unlockDoor();
+            
+            // Wait 45 seconds for the door unlock process to complete before sending confirmation
+            // This gives Chrome time to start, load the page, and click the buttons
+            setTimeout(resolve, 45000);
+          } catch (err) {
+            reject(err);
+          }
+        });
+        
+        // Send a confirmation message using the DiscordBot after waiting
+        console.log('Door unlock process completed. Sending confirmation message...');
+        try {
+          startBot(token, client);
+          
+          // Also send a direct confirmation in this channel
+          await message.channel.send('✅ Door unlock process completed! The door should now be unlocked.');
+        } catch (botError) {
+          console.error('Error sending confirmation message:', botError);
+          await message.channel.send('Door should be unlocked, but there was an error sending the confirmation message.');
+        }
       } catch (unlockError) {
         console.error('Error unlocking door:', unlockError);
         await message.reply('Sorry, there was an error unlocking the door. Please try again or contact support.');
         return;
-      }
-      
-      // Send a confirmation message using the DiscordBot
-      console.log('Sending confirmation message...');
-      try {
-        startBot(token, client);
-      } catch (botError) {
-        console.error('Error sending confirmation message:', botError);
-        // We don't need to notify the user here since the door was already unlocked
       }
     } catch (error) {
       console.error('Error processing unlock command:', error);
