@@ -1,3 +1,5 @@
+const path = require('path');
+
 /**
  * BuzzButton.js
  * Handles the logic for finding and clicking unlock buttons on the Kisi dashboard
@@ -12,8 +14,9 @@ async function pressButtons(page) {
   console.log('Looking for unlock buttons...');
   
   // Take a screenshot to see what's on the page before we start
-  await page.screenshot({ path: '/Users/nolanmakatche/TheYardBuzzIn/dashboard-before.png' });
-  console.log('Screenshot saved as dashboard-before.png');
+  const screenshotPath = path.join(__dirname, 'dashboard-before.png');
+  await page.screenshot({ path: screenshotPath });
+  console.log(`Screenshot saved as ${screenshotPath}`);
   
   // Wait for the unlock buttons to be available
   console.log('Waiting for unlock buttons to be available...');
@@ -132,6 +135,11 @@ async function pressButtons(page) {
         }
       }
       
+      // Take a screenshot after all attempts
+      const afterAttemptsPath = path.join(__dirname, 'buttons-after-attempts.png');
+      await page.screenshot({ path: afterAttemptsPath });
+      console.log(`Screenshot saved as ${afterAttemptsPath}`);
+      
       return true;
     } else {
       // Last resort: Try to directly click based on the exact HTML structure
@@ -211,8 +219,9 @@ async function pressButtons(page) {
       }
       
       // Take a screenshot after all attempts
-      await page.screenshot({ path: '/Users/nolanmakatche/TheYardBuzzIn/buttons-after-attempts.png' });
-      console.log('Screenshot saved as buttons-after-attempts.png');
+      const afterAttemptsPath = path.join(__dirname, 'buttons-after-attempts.png');
+      await page.screenshot({ path: afterAttemptsPath });
+      console.log(`Screenshot saved as ${afterAttemptsPath}`);
       
       return true;
     }
@@ -293,8 +302,9 @@ async function pressButtons(page) {
  */
 async function checkUnlockSuccess(page) {
   // Take a screenshot to see what's on the page after clicking
-  await page.screenshot({ path: '/Users/nolanmakatche/TheYardBuzzIn/dashboard-after.png' });
-  console.log('Screenshot saved as dashboard-after.png');
+  const afterScreenshotPath = path.join(__dirname, 'dashboard-after.png');
+  await page.screenshot({ path: afterScreenshotPath });
+  console.log(`Screenshot saved as ${afterScreenshotPath}`);
   
   // Check if we were successful
   const doorUnlocked = await page.evaluate(() => {
