@@ -3,6 +3,43 @@ const { exec } = require('child_process');
 const util = require('util');
 const execPromise = util.promisify(exec);
 const { pressButtons, checkUnlockSuccess } = require('./BuzzButton');
+const os = require('os');
+const path = require('path');
+
+async function getChromeExecutablePath() {
+  const platform = os.platform();
+  if (platform === 'darwin') { // macOS
+    return '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+  } else if (platform === 'win32') { // Windows
+    const possiblePaths = [
+      path.join(process.env['ProgramFiles'], 'Google/Chrome/Application/chrome.exe'),
+      path.join(process.env['ProgramFiles(x86)'], 'Google/Chrome/Application/chrome.exe'),
+      path.join(process.env['LocalAppData'], 'Google/Chrome/Application/chrome.exe')
+    ];
+    for (const path of possiblePaths) {
+      try {
+        if (require('fs').existsSync(path)) {
+          return path;
+        }
+      } catch (e) {}
+    }
+    throw new Error('Could not find Chrome installation');
+  }
+  throw new Error('Unsupported platform');
+}
+
+async function killExistingChromeDebugger() {
+  const platform = os.platform();
+  try {
+    if (platform === 'darwin') {
+      await execPromise('pkill -f "Google Chrome.*remote-debugging-port=9222"');
+    } else if (platform === 'win32') {
+      await execPromise('taskkill /F /IM chrome.exe /FI "WINDOWTITLE eq remote-debugging-port=9222"');
+    }
+  } catch (e) {
+    // It's okay if this fails - it just means no Chrome was running
+  }
+}
 
 async function unlockDoor() {
   console.log('Starting the door unlock process...');
@@ -10,16 +47,15 @@ async function unlockDoor() {
   
   try {
     // Kill any existing Chrome processes that might be using port 9222
-    try {
-      console.log('Closing any existing Chrome instances using port 9222...');
-      await execPromise('pkill -f "Google Chrome.*remote-debugging-port=9222"');
-    } catch (e) {
-      // It's okay if this fails - it just means no Chrome was running
-    }
+    await killExistingChromeDebugger();
     
-    // Start Chrome with remote debugging enabled - using a more specific command
+    // Get the appropriate Chrome path for the current OS
+    const chromePath = await getChromeExecutablePath();
     console.log('Opening Chrome with remote debugging...');
-    await execPromise('/Applications/Google\\ Chrome.app/Contents/MacOS/Google\\ Chrome --remote-debugging-port=9222 --no-first-run --no-default-browser-check --user-data-dir=/tmp/chrome-debug-profile https://web.kisi.io/organization/4103/dashboard &');
+    
+    // Start Chrome with remote debugging enabled - using escaped paths
+    const chromeCommand = `"${chromePath}" --remote-debugging-port=9222 --no-first-run --no-default-browser-check --user-data-dir="${path.join(os.tmpdir(), 'chrome-debug-profile')}" https://web.kisi.io/organization/4103/dashboard`;
+    await execPromise(chromeCommand);
     
     // Wait for Chrome to be ready by polling the debugging port
     console.log('Waiting for Chrome debugging port to be ready...');
