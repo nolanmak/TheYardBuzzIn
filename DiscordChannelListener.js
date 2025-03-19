@@ -216,7 +216,7 @@ function startDiscordChannelListener(token) {
             
             // Wait 45 seconds for the door unlock process to complete before sending confirmation
             // This gives Chrome time to start, load the page, and click the buttons
-            setTimeout(resolve, 45000);
+            setTimeout(resolve, 5000);
           } catch (err) {
             reject(err);
           }
@@ -225,10 +225,10 @@ function startDiscordChannelListener(token) {
         // Send a confirmation message using the DiscordBot after waiting
         console.log('Door unlock process completed. Sending confirmation message...');
         try {
-          startBot(token, client);
+          // startBot(token, client);
           
           // Also send a direct confirmation in this channel
-          await message.channel.send('✅ Door unlock process completed! The door should now be unlocked.');
+          await message.channel.send('✅ Door unlock process completed! BUILD Something Great Today!');
         } catch (botError) {
           console.error('Error sending confirmation message:', botError);
           await message.channel.send('Door should be unlocked, but there was an error sending the confirmation message.');

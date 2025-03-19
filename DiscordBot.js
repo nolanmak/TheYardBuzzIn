@@ -19,7 +19,7 @@ async function sendConfirmationMessage(existingClient) {
         );
         
         if (generalChannel) {
-          await generalChannel.send('Door has been unlocked successfully! ✅ BUILD something great today!');
+          // await generalChannel.send('Door has been unlocked successfully! ✅ BUILD something great today!');
           console.log('Confirmation message sent successfully!');
         }
       } catch (fetchError) {
