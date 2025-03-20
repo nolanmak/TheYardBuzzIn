@@ -6,6 +6,9 @@ const { pressButtons, checkUnlockSuccess } = require('./BuzzButton');
 const os = require('os');
 const path = require('path');
 
+// Keep a global reference to the browser connection
+let globalBrowser = null;
+
 async function getChromeExecutablePath() {
   const platform = os.platform();
   if (platform === 'darwin') { // macOS
@@ -28,87 +31,100 @@ async function getChromeExecutablePath() {
   throw new Error('Unsupported platform');
 }
 
-async function killExistingChromeDebugger() {
-  const platform = os.platform();
+async function ensureChromeIsRunning() {
   try {
-    if (platform === 'darwin') {
-      await execPromise('pkill -f "Google Chrome.*remote-debugging-port=9222"');
-    } else if (platform === 'win32') {
-      await execPromise('taskkill /F /IM chrome.exe /FI "WINDOWTITLE eq remote-debugging-port=9222"');
-    }
+    // Try to connect to existing Chrome instance first
+    globalBrowser = await puppeteer.connect({
+      browserURL: 'http://127.0.0.1:9222',
+      defaultViewport: null
+    });
+    console.log('Connected to existing Chrome instance');
+    return true;
   } catch (e) {
-    // It's okay if this fails - it just means no Chrome was running
+    console.log('No existing Chrome instance found, starting new one...');
+    try {
+      // Get the appropriate Chrome path for the current OS
+      const chromePath = await getChromeExecutablePath();
+      
+      // Start Chrome with remote debugging enabled
+      const chromeCommand = `"${chromePath}" --remote-debugging-port=9222 --no-first-run --no-default-browser-check --user-data-dir="${path.join(os.tmpdir(), 'chrome-debug-profile')}"`;
+      await execPromise(chromeCommand);
+      
+      // Wait for Chrome to be ready
+      console.log('Waiting for Chrome debugging port to be ready...');
+      const http = require('http');
+      const maxAttempts = 30;
+      let attempts = 0;
+      
+      await new Promise((resolve, reject) => {
+        const checkChromeReady = () => {
+          attempts++;
+          const req = http.get('http://127.0.0.1:9222/json/version', (res) => {
+            if (res.statusCode === 200) {
+              console.log(`Chrome is ready after ${attempts} attempts`);
+              resolve();
+            } else if (attempts < maxAttempts) {
+              setTimeout(checkChromeReady, 500);
+            } else {
+              resolve();
+            }
+          });
+          
+          req.on('error', (err) => {
+            if (attempts < maxAttempts) {
+              setTimeout(checkChromeReady, 500);
+            } else {
+              resolve();
+            }
+          });
+          req.end();
+        };
+        checkChromeReady();
+      });
+      
+      // Connect to the new Chrome instance
+      globalBrowser = await puppeteer.connect({
+        browserURL: 'http://127.0.0.1:9222',
+        defaultViewport: null
+      });
+      console.log('Connected to new Chrome instance');
+      return true;
+    } catch (error) {
+      console.error('Failed to start Chrome:', error);
+      return false;
+    }
   }
 }
 
 async function unlockDoor() {
   console.log('Starting the door unlock process...');
-  let browser = null;
   
   try {
-    // Kill any existing Chrome processes that might be using port 9222
-    await killExistingChromeDebugger();
-    
-    // Get the appropriate Chrome path for the current OS
-    const chromePath = await getChromeExecutablePath();
-    console.log('Opening Chrome with remote debugging...');
-    
-    // Start Chrome with remote debugging enabled - using escaped paths
-    const chromeCommand = `"${chromePath}" --remote-debugging-port=9222 --no-first-run --no-default-browser-check --user-data-dir="${path.join(os.tmpdir(), 'chrome-debug-profile')}" https://web.kisi.io/organization/4103/dashboard`;
-    await execPromise(chromeCommand);
-    
-    // Wait for Chrome to be ready by polling the debugging port
-    console.log('Waiting for Chrome debugging port to be ready...');
-    
-    const http = require('http');
-    const maxAttempts = 30; // Maximum number of attempts (30 attempts * 500ms = 15 seconds max)
-    let attempts = 0;
-    
-    await new Promise((resolve, reject) => {
-      const checkChromeReady = () => {
-        attempts++;
-        const req = http.get('http://127.0.0.1:9222/json/version', (res) => {
-          if (res.statusCode === 200) {
-            console.log(`Chrome is ready after ${attempts} attempts`);
-            resolve();
-          } else {
-            if (attempts < maxAttempts) {
-              setTimeout(checkChromeReady, 500); // Check every 500ms
-            } else {
-              console.log('Max attempts reached, continuing anyway...');
-              resolve();
-            }
-          }
-        });
-        
-        req.on('error', (err) => {
-          if (attempts < maxAttempts) {
-            setTimeout(checkChromeReady, 500); // Check every 500ms
-          } else {
-            console.log('Max attempts reached, continuing anyway...');
-            resolve();
-          }
-        });
-        
-        req.end();
-      };
-      
-      // Start checking
-      checkChromeReady();
-    });
-    
-    // Connect to Chrome - explicitly using 127.0.0.1 instead of localhost
-    console.log('Connecting to Chrome...');
-    browser = await puppeteer.connect({
-      browserURL: 'http://127.0.0.1:9222',
-      defaultViewport: null
-    });
-    
-    console.log('Successfully connected to Chrome');
+    // Ensure Chrome is running and we're connected
+    if (!await ensureChromeIsRunning()) {
+      throw new Error('Failed to connect to Chrome');
+    }
     
     // Get all pages
-    const pages = await browser.pages();
-    const page = pages[pages.length - 1]; // Get the last page which should be the Kisi dashboard
+    const pages = await globalBrowser.pages();
+    let page;
+    
+    // Check if there's already a Kisi page open
+    for (const existingPage of pages) {
+      const url = await existingPage.url();
+      if (url.includes('kisi.io')) {
+        console.log('Found existing Kisi page, reusing it...');
+        page = existingPage;
+        break;
+      }
+    }
+    
+    // If no existing Kisi page found, create a new one
+    if (!page) {
+      console.log('No existing Kisi page found, creating new one...');
+      page = await globalBrowser.newPage();
+      await page.goto('https://web.kisi.io/organization/4103/dashboard');
+    }
     
     // Wait for the page to be fully loaded
     console.log('Waiting for page to load completely...');
@@ -149,17 +165,22 @@ async function unlockDoor() {
     
   } catch (error) {
     console.error('An error occurred:', error);
-  } finally {
-    // Disconnect from the browser if connected
-    if (browser) {
-      try {
-        await browser.disconnect();
-        console.log('Disconnected from browser');
-      } catch (closeError) {
-        console.error('Error disconnecting from browser:', closeError);
-      }
+    // Don't disconnect on error, just log it
+  }
+  // Don't disconnect from browser anymore - keep the connection alive
+}
+
+// Add a cleanup function that can be called when the application is shutting down
+async function cleanup() {
+  if (globalBrowser) {
+    try {
+      await globalBrowser.disconnect();
+      console.log('Disconnected from browser');
+    } catch (error) {
+      console.error('Error disconnecting from browser:', error);
     }
+    globalBrowser = null;
   }
 }
 
-module.exports = { unlockDoor };
+module.exports = { unlockDoor, cleanup };
