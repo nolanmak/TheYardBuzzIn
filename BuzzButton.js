@@ -86,11 +86,11 @@ async function pressButtons(page) {
     if (clickResult.length > 0) {
       console.log(`Found ${clickResult.length} buttons to click`);
       
-      // Click each button 5 times with a 3-second delay
+      // Click each button 2 times with a 3-second delay
       for (const buttonId of clickResult) {
-        console.log(`Clicking button with ID ${buttonId} 5 times...`);
+        console.log(`Clicking button with ID ${buttonId} 2 times...`);
         
-        for (let i = 0; i < 5; i++) {
+        for (let i = 0; i < 2; i++) {
           console.log(`Click ${i+1} on button ${buttonId}`);
           try {
             // Check if the button still exists before clicking
@@ -146,8 +146,8 @@ async function pressButtons(page) {
       console.log('Trying one last approach - direct evaluation and click...');
       
       // Try clicking buttons multiple times with delays between attempts
-      for (let attempt = 0; attempt < 5; attempt++) {
-        console.log(`Last resort attempt ${attempt+1} of 5`);
+      for (let attempt = 0; attempt < 2; attempt++) {
+        console.log(`Last resort attempt ${attempt+1} of 2`);
         
         const lastAttempt = await page.evaluate(() => {
           // This is the exact button structure from the user's input
@@ -226,11 +226,11 @@ async function pressButtons(page) {
       return true;
     }
   } else {
-    // We found buttons using the selector, now click both buttons simultaneously 5 times with a delay
-    console.log('Clicking both unlock buttons simultaneously 5 times with a 3-second delay');
+    // We found buttons using the selector, now click both buttons simultaneously 2 times with a delay
+    console.log('Clicking both unlock buttons simultaneously 2 times with a 3-second delay');
     
-    // Click both buttons 5 times simultaneously
-    for (let i = 0; i < 5; i++) {
+    // Click both buttons 2 times simultaneously
+    for (let i = 0; i < 2; i++) {
       console.log(`Click attempt ${i+1} on both buttons simultaneously`);
       
       try {
