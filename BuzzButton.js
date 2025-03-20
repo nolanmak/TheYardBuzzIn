@@ -86,7 +86,7 @@ async function pressButtons(page) {
     if (clickResult.length > 0) {
       console.log(`Found ${clickResult.length} buttons to click`);
       
-      // Click each button 2 times with a 3-second delay
+      // Click each button 2 times with a 5-second delay
       for (const buttonId of clickResult) {
         console.log(`Clicking button with ID ${buttonId} 2 times...`);
         
@@ -116,7 +116,14 @@ async function pressButtons(page) {
             }, buttonId);
             
             if (buttonExists) {
+              // First click using Puppeteer's click method
               await page.click(`#${buttonId}`).catch(e => console.error(`Error clicking button ${buttonId}:`, e));
+              
+              // Second click using JavaScript's click method for redundancy
+              await page.evaluate((id) => {
+                const button = document.getElementById(id);
+                if (button) button.click();
+              }, buttonId);
             } else {
               console.log(`Button ${buttonId} no longer exists in the DOM for click ${i+1}`);
               // Try to find buttons again using alternative methods
@@ -131,7 +138,7 @@ async function pressButtons(page) {
           } catch (e) {
             console.error(`Error with button ${buttonId}:`, e);
           }
-          await new Promise(resolve => setTimeout(resolve, 3000)); // 3-second delay between clicks
+          await new Promise(resolve => setTimeout(resolve, 5000)); // 5-second delay between clicks
         }
       }
       
@@ -197,6 +204,12 @@ async function pressButtons(page) {
               if (possibleLockButtons.length > 0) {
                 console.log(`Found ${possibleLockButtons.length} possible lock-related buttons by text`);
                 clickButtons(possibleLockButtons);
+                
+                // Make sure the clicks register by clicking again
+                setTimeout(() => {
+                  if (possibleLockButtons[0]) possibleLockButtons[0].click();
+                  if (possibleLockButtons[1]) possibleLockButtons[1].click();
+                }, 500);
               }
             }
           } else {
@@ -210,11 +223,11 @@ async function pressButtons(page) {
         if (lastAttempt) {
           console.log('Successfully clicked buttons in last attempt');
           // Wait between attempts
-          await new Promise(resolve => setTimeout(resolve, 3000));
+          await new Promise(resolve => setTimeout(resolve, 5000));
         } else {
           console.log(`No buttons found in attempt ${attempt+1}`);
           // Wait before trying again
-          await new Promise(resolve => setTimeout(resolve, 2000));
+          await new Promise(resolve => setTimeout(resolve, 5000));
         }
       }
       
@@ -227,7 +240,7 @@ async function pressButtons(page) {
     }
   } else {
     // We found buttons using the selector, now click both buttons simultaneously 2 times with a delay
-    console.log('Clicking both unlock buttons simultaneously 2 times with a 3-second delay');
+    console.log('Clicking both unlock buttons simultaneously 2 times with a 5-second delay');
     
     // Click both buttons 2 times simultaneously
     for (let i = 0; i < 2; i++) {
@@ -267,6 +280,13 @@ async function pressButtons(page) {
         if (clickPromises.length > 0) {
           await Promise.all(clickPromises);
           console.log(`Successfully clicked ${clickPromises.length} button(s) simultaneously`);
+          
+          // Follow up with direct DOM clicks for redundancy
+          await page.evaluate(() => {
+            const unlockButtons = document.querySelectorAll('button[data-test-id="unlock-button"]');
+            if (unlockButtons[0]) unlockButtons[0].click();
+            if (unlockButtons[1]) unlockButtons[1].click();
+          });
         } else {
           // If no buttons were found with standard selectors, try page.evaluate as a fallback
           console.log('No buttons found with standard selectors, trying page.evaluate');
@@ -286,7 +306,7 @@ async function pressButtons(page) {
       }
       
       // Wait between click attempts
-      await new Promise(resolve => setTimeout(resolve, 3000)); // 3-second delay between clicks
+      await new Promise(resolve => setTimeout(resolve, 5000)); // 5-second delay between clicks
     }
     
     return true;
