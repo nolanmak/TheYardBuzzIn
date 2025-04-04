@@ -71,7 +71,11 @@ async function pressButtons(page) {
       if (buttonsWithLockIcon.length > 0) {
         // Return the IDs of the buttons we found so we can click them from outside
         const buttonIds = [];
-        for (let i = 0; i < Math.min(2, buttonsWithLockIcon.length); i++) {
+        // Select 2nd and 3rd buttons (index 1 and 2) if available
+        const startIndex = Math.min(1, buttonsWithLockIcon.length - 1); // Start from index 1 if possible
+        const endIndex = Math.min(startIndex + 2, buttonsWithLockIcon.length); // Get up to 2 buttons
+        
+        for (let i = startIndex; i < endIndex; i++) {
           // Add a unique ID to each button so we can find it later
           const uniqueId = 'unlock-btn-' + i;
           buttonsWithLockIcon[i].setAttribute('id', uniqueId);
@@ -165,15 +169,18 @@ async function pressButtons(page) {
           // Function to click buttons simultaneously
           const clickButtons = (buttonArray) => {
             if (buttonArray.length > 0) {
-              // Click buttons simultaneously
-              if (buttonArray[0]) {
-                console.log('Clicking first button');
-                buttonArray[0].click();
+              // Click 2nd and 3rd buttons if available (index 1 and 2)
+              const secondButtonIndex = Math.min(1, buttonArray.length - 1);
+              const thirdButtonIndex = Math.min(2, buttonArray.length - 1);
+              
+              if (buttonArray[secondButtonIndex]) {
+                console.log('Clicking second button');
+                buttonArray[secondButtonIndex].click();
                 clickedAny = true;
               }
-              if (buttonArray[1]) {
-                console.log('Clicking second button');
-                buttonArray[1].click();
+              if (buttonArray[thirdButtonIndex] && secondButtonIndex !== thirdButtonIndex) {
+                console.log('Clicking third button');
+                buttonArray[thirdButtonIndex].click();
                 clickedAny = true;
               }
             }
@@ -207,8 +214,12 @@ async function pressButtons(page) {
                 
                 // Make sure the clicks register by clicking again
                 setTimeout(() => {
-                  if (possibleLockButtons[0]) possibleLockButtons[0].click();
-                  if (possibleLockButtons[1]) possibleLockButtons[1].click();
+                  const secondButtonIndex = Math.min(1, possibleLockButtons.length - 1);
+                  const thirdButtonIndex = Math.min(2, possibleLockButtons.length - 1);
+                  
+                  if (possibleLockButtons[secondButtonIndex]) possibleLockButtons[secondButtonIndex].click();
+                  if (possibleLockButtons[thirdButtonIndex] && secondButtonIndex !== thirdButtonIndex) 
+                    possibleLockButtons[thirdButtonIndex].click();
                 }, 500);
               }
             }
@@ -254,18 +265,7 @@ async function pressButtons(page) {
         // Create an array to hold our click promises
         const clickPromises = [];
         
-        // Try to click the first button
-        if (freshButtons.length > 0) {
-          console.log('Clicking first button with primary selector');
-          clickPromises.push(freshButtons[0].click().catch(e => console.error('Error clicking first button with primary selector:', e)));
-        } else if (altButtons.length > 0) {
-          console.log('Clicking first button with alternative selector');
-          clickPromises.push(altButtons[0].click().catch(e => console.error('Error clicking first button with alternative selector:', e)));
-        } else {
-          console.log(`No first button found for click ${i+1}`);
-        }
-        
-        // Try to click the second button
+        // Try to click the first button (now targeting the 2nd button)
         if (freshButtons.length > 1) {
           console.log('Clicking second button with primary selector');
           clickPromises.push(freshButtons[1].click().catch(e => console.error('Error clicking second button with primary selector:', e)));
@@ -276,6 +276,17 @@ async function pressButtons(page) {
           console.log(`No second button found for click ${i+1}`);
         }
         
+        // Try to click the second button (now targeting the 3rd button)
+        if (freshButtons.length > 2) {
+          console.log('Clicking third button with primary selector');
+          clickPromises.push(freshButtons[2].click().catch(e => console.error('Error clicking third button with primary selector:', e)));
+        } else if (altButtons.length > 2) {
+          console.log('Clicking third button with alternative selector');
+          clickPromises.push(altButtons[2].click().catch(e => console.error('Error clicking third button with alternative selector:', e)));
+        } else {
+          console.log(`No third button found for click ${i+1}`);
+        }
+        
         // Execute all clicks simultaneously
         if (clickPromises.length > 0) {
           await Promise.all(clickPromises);
@@ -284,8 +295,8 @@ async function pressButtons(page) {
           // Follow up with direct DOM clicks for redundancy
           await page.evaluate(() => {
             const unlockButtons = document.querySelectorAll('button[data-test-id="unlock-button"]');
-            if (unlockButtons[0]) unlockButtons[0].click();
-            if (unlockButtons[1]) unlockButtons[1].click();
+            if (unlockButtons.length > 1) unlockButtons[1].click(); // 2nd button
+            if (unlockButtons.length > 2) unlockButtons[2].click(); // 3rd button
           });
         } else {
           // If no buttons were found with standard selectors, try page.evaluate as a fallback
@@ -297,8 +308,8 @@ async function pressButtons(page) {
             });
             
             // Click buttons simultaneously
-            if (lockButtons[0]) lockButtons[0].click();
-            if (lockButtons[1]) lockButtons[1].click();
+            if (lockButtons.length > 1) lockButtons[1].click(); // 2nd button
+            if (lockButtons.length > 2) lockButtons[2].click(); // 3rd button
           });
         }
       } catch (e) {
