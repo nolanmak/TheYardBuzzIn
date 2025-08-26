@@ -1,6 +1,6 @@
 
 
-A Discord bot that listens for messages and automatically unlocks the door at The Yard coworking space using Puppeteer to interact with the Kisi dashboard.
+A Discord bot that listens for messages and automatically unlocks the door at our coworking space using Puppeteer to interact with the Kisi dashboard.
 
 ## Features
 
